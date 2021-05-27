@@ -70,7 +70,7 @@ if "%scala_version%"=="2.12" (
 echo Enter Spark version (%spark_version%):
 set /P "spark_version=" || set "spark_version=%spark_version%"
 
-echo Enter Databricks workspace profile (dev):
+echo Enter Databricks workspace profile (default):
 set /P "databricks_profile=" || set "databricks_profile=default"
 
 for /f "eol=- delims=" %%a in (%userprofile%\%databricks_profile%.databricks.config) do set "%%a"
@@ -136,17 +136,6 @@ echo creating cluster %cluster_name%
 databricks clusters create --json-file databricks_cluster.json --profile %databricks_profile%
 
 del databricks_cluster.json
-
-call :get_cluster_id %cluster_name%, cluster_id
-
-set /P c=Upload Libraries to Databricks cluster [Y/N]?
-if /I "%c%" EQU "Y" goto :upload_libs
-if /I "%c%" EQU "N" goto :exit
-goto :exit
-
-:upload_libs
-
-databricks libraries install --maven-coordinates com.amazonaws:aws-encryption-sdk-java:1.3.6 --cluster-id %cluster_id% --profile %databricks_profile%
 
 goto :exit
 
