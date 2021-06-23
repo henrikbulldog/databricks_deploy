@@ -1,6 +1,6 @@
 @echo off
 setlocal
-echo Create a Databricks cluster with the jar files needed to run this job.
+echo Deploys a Scala project to a Databricks cluster.
 echo Prerequisites:
 echo - Docker must be installed (https://docs.docker.com/docker-for-windows/install/)
 echo You must be logged in to a Docker repo (docker login)
@@ -39,7 +39,9 @@ goto :skip_dockerize
 :dockerize
 
 echo FROM databricksruntime/standard:latest > Dockerfile
-echo ADD ./lib/*.jar /databricks/jars/ >> Dockerfile
+if exist ./lib/ (
+  echo ADD ./lib/*.jar /databricks/jars/ >> Dockerfile
+)
 echo ADD ./target/scala-%scala_version%/*.jar /databricks/jars/ >> Dockerfile
 
 @echo on
