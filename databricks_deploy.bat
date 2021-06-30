@@ -38,9 +38,34 @@ goto :skip_dockerize
 
 :dockerize
 
+:enter_dependency
+set /P c=Enter dependency [Y/N]?
+if /I "%c%" NEQ "Y" goto :enter_dependency_done
+
+echo Enter dependency domain (io.spray):
+set /P "dependency_domain=" || set "dependency_domain=io.spray"
+
+echo Enter dependency name (spray-json):
+set /P "dependency_name=" || set "dependency_name=spray-json"
+
+echo Enter dependency version (1.3.6):
+set /P "dependency_version=" || set "dependency_version=1.3.6"
+
+set dependency_path=%userprofile%\AppData\Local\Coursier\cache\v1\https\repo1.maven.org\maven2\%dependency_domain:.=\%\%dependency_name%_%scala_version%\%dependency_version%
+
+md .\templib
+copy "%dependency_path%\%dependency_name%_%scala_version%-%dependency_version%.jar" .\templib /Y
+
+goto :enter_dependency
+
+:enter_dependency_done
+
 echo FROM databricksruntime/standard:latest > Dockerfile
 if exist ./lib/ (
   echo ADD ./lib/*.jar /databricks/jars/ >> Dockerfile
+)
+if exist ./templib/ (
+  echo ADD ./templib/*.jar /databricks/jars/ >> Dockerfile
 )
 echo ADD ./target/scala-%scala_version%/*.jar /databricks/jars/ >> Dockerfile
 
@@ -51,6 +76,9 @@ docker push %docker_username%/%image_name%:%tag%
 @echo off
 
 del Dockerfile
+if exist ./templib/ (
+  rd templib /S /Q
+)
 
 :skip_dockerize
 

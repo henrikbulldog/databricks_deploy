@@ -29,6 +29,8 @@ goto :exit
 :upload_libs
 
 databricks libraries install --maven-coordinates com.amazonaws:aws-encryption-sdk-java:1.3.6 --cluster-id %cluster_id% --profile %databricks_profile%
+databricks libraries install --maven-coordinates io.spray:spray-json_2.12:1.3.6 --cluster-id %cluster_id% --profile %databricks_profile%
+databricks libraries install --maven-coordinates org.scalaj:scalaj-http_2.12:2.3.0 --cluster-id %cluster_id% --profile %databricks_profile%
 
 goto :exit
 
