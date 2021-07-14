@@ -37,6 +37,9 @@ deleteJarsTask := {
 ```
 - All your settings can be put inside a config.yaml file like below(Applicable only for shell script).
 ```
+ORGANIZATION : <orgnaziation docker hub name>
+REPOSITORY_NAME : <repositort name>
+VERSION : <version of repository>
 clustername: "<enter cluster name>"
 databricks_profile: "<enter profile>"
 roles: {
