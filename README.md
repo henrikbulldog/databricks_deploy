@@ -7,7 +7,7 @@ Windows command scripts to deploy a Scala project to a Databricks cluster.
 - Databricks cli must be installed (pip install databricks-cli)
 - Databricks cli must be configured (databricks configure)
 - If you are using STS assume roles to access AWS S3 buckets from Databricks, you need the ARN of instance profile role and the assume role (1 time per profile)
-Make sure to update the build.sbt with below tasks
+- Make sure to update the build.sbt with below tasks
 ```
 val copyJarsTask = taskKey[Unit]("copy-jars")
 copyJarsTask := {
@@ -35,7 +35,24 @@ deleteJarsTask := {
 
 }
 ```
+- All your settings can be put inside a configuration.yaml file like below .
+```
+clustername: "<Enter cluster name>"
+databricks_profile: "<enter profile>>"
+roles: {
+ instance_profile_arn: "<enter role>"
+ assume_role_arn: "<enter role>"
+}
+zone_id: "<enter region>"
+min_workers: "<min workers>"
+max_workers: "<max workers>"
+spark_version: "<spark version in cluster>"
+node_type_id : "<node type>"
+autotermination_minutes: "<time out>"
+driver_node_type_id : "<driver node type>"
+docker_image_url : "<docker image path>"
 
+```
 # Usage
 - Go to the root folder of your project.
 - Run databricks_deploy.bat and follow instructions
