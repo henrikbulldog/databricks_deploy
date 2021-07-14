@@ -2,13 +2,19 @@
 echo "Prerequisites:"
 echo "Docker must be installed (https://docs.docker.com/docker-for-windows/install/)"
 echo "You must be logged in to a Docker repo (docker login)"
-echo "You must have docker cli installed and profile used here should be configured using docker cofigure"
+echo "You must have docker cli installed and profile used here should be configured using docker configure"
 #Read scala version from sbt
 PROJECT_NAME="$(sbt name | tail -1)"
 imagename="${PROJECT_NAME#* }"
 #
 SCALA_VERSION="$(sbt scalaVersion | tail -1 | awk -F '.' '{print $1 "."$2}')"
 SCALA_VERSION="${SCALA_VERSION#* }"
+export ORGANIZATION
+export REPOSITORY_NAME
+export VERSION
+#import yml parsing script
+. parse_yaml.sh
+
 #
 #
 #echo ${PROJECT_NAME}
@@ -20,11 +26,29 @@ function jumpto
     eval "$cmd"
     exit
 }
+function strip_quotes() {
+    local -n var="$1"
+    [[ "${var}" == \"*\" || "${var}" == \'*\' ]] && var="${var:1:-1}"
+}
+
 start=${1:-"start"}
 
 jumpto $start
 
 start:
+filename="config.yml"
+read -p "Please enter the configuration yml file name $f [$filename]:" userinputname
+
+if [ ! -z "$userinputname" -a "$userinputname" != " " ]; then
+filename=$userinputname
+fi
+if [ -e ${filename} ]
+then
+eval $(parse_yaml ${filename} "config_")
+else
+echo "No file with ${filename} name exists.Exiting..."
+jumpto end
+fi
 read -p "Do you want to clean and build the project.Pressing no will skip creation of container too and use the exiting container in dockerhub$build? [y/n]" answer
 #
 if [[ ${answer} = y ]]; then
@@ -41,8 +65,11 @@ read -p "Enter the image name [${imagename}] : $name" imagename
 docker build  --build-arg SCALA_VERSION="scala-${SCALA_VERSION}" --no-cache -t imagename:local .
 fi
 
-
 deploy:
+#Setting all deploy values from yaml
+ORGANIZATION=$config_ORGANIZATION
+REPOSITORY_NAME=$config_REPOSITORY_NAME
+VERSION=$config_VERSION
 #Running deploy script
 echo "Creating tag and pushing  the container to dockerhub"
 bash  $(pwd)/deploy.sh
@@ -50,23 +77,6 @@ bash  $(pwd)/deploy.sh
 createcluster:
 #Reading configuration from yaml
 echo "Creating cluster"
-. parse_yaml.sh
-
-read -p "Please enter the configuration yml file name $f:" filename
-
-if [ -e ${filename} ]
-then
-eval $(parse_yaml ${filename} "config_")
-else
-echo "No file with ${filename} name exists.Exiting..."
-jumpto end
-fi
-
-
-function strip_quotes() {
-    local -n var="$1"
-    [[ "${var}" == \"*\" || "${var}" == \'*\' ]] && var="${var:1:-1}"
-}
 #Create the databricks config json file
 function create_databricks_config_json()
 {
@@ -77,13 +87,6 @@ echo '{
     "max_workers":' $config_max_workers '},
     "cluster_name"': $config_clustername',
     "spark_version"': $config_spark_version',
-    "spark_conf": {
-    "spark.hadoop.fs.s3a.impl": "com.databricks.s3a.S3AFileSystem",
-     "spark.hadoop.fs.s3n.impl": "com.databricks.s3a.S3AFileSystem",
-     "spark.hadoop.fs.s3a.credentialsType": "AssumeRole",
-     "spark.hadoop.fs.s3a.stsAssumeRole.arn":' $config_roles_assume_role_arn ',
-     "spark.hadoop.fs.s3.impl": "com.databricks.s3a.S3AFileSystem"
-     },
      "aws_attributes": {
      "zone_id"': $config_zone_id ',
      "instance_profile_arn":' $config_roles_instance_profile_arn '},
@@ -97,9 +100,20 @@ echo '{
     strip_quotes profile
      if [[ $profile != "DEV"  ]]; then
        echo '"spark_env_vars":{
-        "AWS_STS_REGIONAL_ENDPOINTS": "regional"}
-      }'>> databricks_cluster.json
+        "AWS_STS_REGIONAL_ENDPOINTS": "regional"}'>> databricks_cluster.json
       fi
+    asuumerolearn=$config_roles_assume_role_arn
+        strip_quotes asuumerolearn
+    if [[  ! -z $asuumerolearn  ]]; then
+     echo '"spark_conf": {
+    "spark.hadoop.fs.s3a.impl": "com.databricks.s3a.S3AFileSystem",
+     "spark.hadoop.fs.s3n.impl": "com.databricks.s3a.S3AFileSystem",
+     "spark.hadoop.fs.s3a.credentialsType": "AssumeRole",
+     "spark.hadoop.fs.s3a.stsAssumeRole.arn":' $config_roles_assume_role_arn ',
+     "spark.hadoop.fs.s3.impl": "com.databricks.s3a.S3AFileSystem"
+     },'>> databricks_cluster.json
+    fi
+    echo  '}'>> databricks_cluster.json
 }
 
 #Create cluster with specified name
