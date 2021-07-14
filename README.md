@@ -35,10 +35,10 @@ deleteJarsTask := {
 
 }
 ```
-- All your settings can be put inside a configuration.yaml file like below .
+- All your settings can be put inside a config.yaml file like below(Applicable only for shell script).
 ```
-clustername: "<Enter cluster name>"
-databricks_profile: "<enter profile>>"
+clustername: "<enter cluster name>"
+databricks_profile: "<enter profile>"
 roles: {
  instance_profile_arn: "<enter role>"
  assume_role_arn: "<enter role>"
@@ -53,9 +53,14 @@ driver_node_type_id : "<driver node type>"
 docker_image_url : "<docker image path>"
 
 ```
-# Usage
+# Usage of batch script
 - Go to the root folder of your project.
-- Run databricks_deploy.bat and follow instructions
+- Run databricks_deploy.bat  and follow instructions
 - If you need to add Maven refernces the cluster, 
   - Add lines to databricks_libraries_install.bat after the label :upload_libs
   - Run databricks_libraries_install.bat
+
+# Usage of shell script
+- Go to the root folder of your project.
+- Run databricks_deploy.sh  and follow instructions
+- It will create docker image with all required dependencies and create the databricks cluster for you
