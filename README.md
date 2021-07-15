@@ -37,19 +37,19 @@ deleteJarsTask := {
 ```
 - All your settings can be put inside a config.yaml file like below(Applicable only for shell script).
 ```
-dockerusername : <docker hub user name>
+dockerusername :<docker hub user name>
 VERSION : <version of repository>
-databricks_profile: "<enter profile>"
+databricks_profile:"<enter profile>"
 roles: {
- instance_profile_arn: "<enter role>"
- assume_role_arn: "<enter role>"
+ instance_profile_arn:"<enter role>"
+ assume_role_arn:"<enter role>"
 }
 zone_id: "<enter region>"
-min_workers: "<min workers>"
-max_workers: "<max workers>"
-node_type_id : "<node type>"
-autotermination_minutes: "<time out>"
-driver_node_type_id : "<driver node type>"
+min_workers:"<min workers>"
+max_workers:"<max workers>"
+node_type_id :"<node type>"
+autotermination_minutes:"<time out>"
+driver_node_type_id :"<driver node type>"
 ```
 # Usage of batch script
 - Go to the root folder of your project.

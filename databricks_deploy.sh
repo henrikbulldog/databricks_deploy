@@ -52,7 +52,9 @@ fi
 
 #Setting all required values from yaml
 docker_username=$config_dockerusername
+strip_quotes docker_username
 VERSION=$config_VERSION
+strip_quotes VERSION
 cluster_name=$docker_username/$REPOSITORY_NAME
 url=$docker_username/$REPOSITORY_NAME":latest"
 
