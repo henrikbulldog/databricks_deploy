@@ -6,15 +6,15 @@ echo "You must have docker cli installed and profile used here should be configu
 #Read scala version from sbt
 PROJECT_NAME="$(sbt name | tail -1)"
 imagename="${PROJECT_NAME#* }"
-#
 SCALA_VERSION="$(sbt scalaVersion | tail -1 | awk -F '.' '{print $1 "."$2}')"
 SCALA_VERSION="${SCALA_VERSION#* }"
-export ORGANIZATION
-export REPOSITORY_NAME
-export VERSION
-#import yml parsing script
-. parse_yaml.sh
+export docker_username
+export REPOSITORY_NAME=$imagename
+export VERSION=0.0.1
+parent_path=$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )
 
+#import yml parsing script
+source $parent_path/parse_yaml.sh
 #
 #
 #echo ${PROJECT_NAME}
@@ -37,18 +37,26 @@ jumpto $start
 
 start:
 filename="config.yml"
-read -p "Please enter the configuration yml file name $f [$filename]:" userinputname
+read -p "Please enter the configuration yml file name $f [eg:$filename]:" userinputname
 
 if [ ! -z "$userinputname" -a "$userinputname" != " " ]; then
 filename=$userinputname
 fi
-if [ -e ${filename} ]
+if [ -e $parent_path/${filename} ]
 then
-eval $(parse_yaml ${filename} "config_")
+eval $(parse_yaml $parent_path/${filename} "config_")
 else
 echo "No file with ${filename} name exists.Exiting..."
 jumpto end
 fi
+
+#Setting all required values from yaml
+docker_username=$config_dockerusername
+VERSION=$config_VERSION
+cluster_name=$docker_username/$REPOSITORY_NAME
+url=$docker_username/$REPOSITORY_NAME":latest"
+
+
 read -p "Do you want to clean and build the project.Pressing no will skip creation of container too and use the exiting container in dockerhub$build? [y/n]" answer
 #
 if [[ ${answer} = y ]]; then
@@ -62,21 +70,33 @@ read -p "Do you want to build and push the container to docker hub $f? [y/n]" an
 
 if [[ ${answer} = y ]]; then
 read -p "Enter the image name [${imagename}] : $name" imagename
+#Copy docker file
+$(cp  $parent_path/Dockerfile $(pwd))
 docker build  --build-arg SCALA_VERSION="scala-${SCALA_VERSION}" --no-cache -t imagename:local .
 fi
 
 deploy:
-#Setting all deploy values from yaml
-ORGANIZATION=$config_ORGANIZATION
-REPOSITORY_NAME=$config_REPOSITORY_NAME
-VERSION=$config_VERSION
 #Running deploy script
 echo "Creating tag and pushing  the container to dockerhub"
-bash  $(pwd)/deploy.sh
+bash  $parent_path/deploy.sh
+
+
 
 createcluster:
-#Reading configuration from yaml
 echo "Creating cluster"
+#Set runtime in databricks
+
+if [ "$SCALA_VERSION" == 2.11 ]
+then
+runtime="6.4.x-esr-scala2.11"
+elif [ "$SCALA_VERSION" == 2.12 ]
+then
+runtime="7.3.x-scala2.12"
+else
+echo "Not Supported"
+jumpto end
+fi
+
 #Create the databricks config json file
 function create_databricks_config_json()
 {
@@ -85,8 +105,8 @@ echo '{
     "autoscale": {
     "min_workers":' $config_min_workers',
     "max_workers":' $config_max_workers '},
-    "cluster_name"': $config_clustername',
-    "spark_version"': $config_spark_version',
+    "cluster_name"': \"$cluster_name\"',
+    "spark_version"': \"$runtime\"',
      "aws_attributes": {
      "zone_id"': $config_zone_id ',
      "instance_profile_arn":' $config_roles_instance_profile_arn '},
@@ -94,7 +114,7 @@ echo '{
      "autotermination_minutes":' $config_autotermination_minutes',
      "driver_node_type_id":' $config_driver_node_type_id',
      "docker_image": {
-      "url":'$config_docker_image_url '},'
+      "url":' \"$url\" '},'
     }>> databricks_cluster.json
     profile=$config_databricks_profile
     strip_quotes profile
@@ -123,8 +143,6 @@ profile_name=$config_databricks_profile
 strip_quotes profile_name
 databricks clusters create --json-file databricks_cluster.json --profile $profile_name
 echo "### Cluster created sucessfully with below information ###"
-cluster_name=$config_clustername
-strip_quotes cluster_name
 echo $(databricks clusters get --cluster-name "$cluster_name")
 }
 
@@ -144,8 +162,6 @@ cluster_id=""
 read -p "Create Databricks cluster and deploy docker image $cluster? [y/n]" answer
 
 if [[ ${answer} = y ]]; then
-cluster_name=$config_clustername
-strip_quotes cluster_name
 cluster_id=$(databricks clusters get --cluster-name "$cluster_name" | grep -oP '(?<="cluster_id": ")[^"]*')
 else
 jumpto end
@@ -154,7 +170,7 @@ if [[ -z "$cluster_id" ]]; then
 echo "Creating cluster"
 create_cluster
 else
-echo "Cluster already  exist with name $config_clustername and id  ${cluster_id} Deleting and recreating"
+echo "Cluster already  exist with name $cluster_name and id  ${cluster_id} Deleting and recreating"
 delete_create_cluster "$cluster_id"
 fi
 #End of script
@@ -166,5 +182,10 @@ sbt deleteJarsTask
 if [ -e databricks_cluster.json ]
 then
 rm databricks_cluster.json
+fi
+##remove dockerfile file
+if [ -e Dockerfile ]
+then
+rm Dockerfile
 fi
 exit 1
