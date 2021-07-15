@@ -60,5 +60,5 @@ driver_node_type_id : "<driver node type>"
 
 # Usage of shell script
 - Go to the root folder of your project.
-- Run databricks_deploy.sh  and follow instructions
+- Run databricks_deploy.sh eg bash path/databricks_deploy.sh and follow instructions
 - It will create docker image with all required dependencies and create the databricks cluster for you
