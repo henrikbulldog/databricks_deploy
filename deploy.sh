@@ -7,10 +7,10 @@ echo "$REPOSITORY_NAME"
 echo "$VERSION"
 echo "${IMAGEID}"
 #
-docker tag "${IMAGEID}" ${docker_username}/${REPOSITORY_NAME}:${VERSION}
-docker tag "${IMAGEID}" ${docker_username}/${REPOSITORY_NAME}:latest
+docker tag "${IMAGEID}" ${docker_username}/${repository_name}:${version}
+docker tag "${IMAGEID}" ${docker_username}/${repository_name}:latest
 
-docker push ${docker_username}/${REPOSITORY_NAME}:${VERSION}
-docker push ${docker_username}/${REPOSITORY_NAME}:latest
+docker push ${docker_username}/${repository_name}:${version}
+docker push ${docker_username}/${repository_name}:latest
 #cleanup
 docker rmi -f ${IMAGEID}

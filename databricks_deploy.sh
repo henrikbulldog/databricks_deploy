@@ -3,21 +3,24 @@ echo "Prerequisites:"
 echo "Docker must be installed (https://docs.docker.com/docker-for-windows/install/)"
 echo "You must be logged in to a Docker repo (docker login)"
 echo "You must have docker cli installed and profile used here should be configured using docker configure"
-#Read scala version from sbt
-PROJECT_NAME="$(sbt name | tail -1)"
-imagename="${PROJECT_NAME#* }"
-SCALA_VERSION="$(sbt scalaVersion | tail -1 | awk -F '.' '{print $1 "."$2}')"
-SCALA_VERSION="${SCALA_VERSION#* }"
+#---------------------------------
 export docker_username
-export REPOSITORY_NAME=$imagename
-export VERSION=0.0.1
-parent_path=$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )
+export repository_name
+export version
+#--------------------------------
+#Read scala version from sbt
 
-#import yml parsing script
+sbt_value="$(sbt -Dsbt.supershell=false -error "print version" "print name" "print scalaVersion")"
+version=$(echo $sbt_value |awk -F ' ' '{print $1}')
+imagename=$(echo $sbt_value |awk -F ' ' '{print $2}')
+scala_version=$(echo $sbt_value |awk -F ' ' '{print $3}'|awk -F '.' '{print $1 "."$2}')
+repository_name=$imagename
+parent_path=$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )
+y#import yml parsing script
 source $parent_path/parse_yaml.sh
 #
 #
-#echo ${PROJECT_NAME}
+#echo ${project_name}
 #Jump to function for better control
 function jumpto
 {
@@ -26,11 +29,15 @@ function jumpto
     eval "$cmd"
     exit
 }
+
 function strip_quotes() {
     local -n var="$1"
     [[ "${var}" == \"*\" || "${var}" == \'*\' ]] && var="${var:1:-1}"
 }
-
+function remove_end_comma(){
+ echo $(echo $1 | sed 's/\(.*\),/\1 /')
+}
+#Init jumpto
 start=${1:-"start"}
 
 jumpto $start
@@ -53,17 +60,25 @@ fi
 #Setting all required values from yaml
 docker_username=$config_dockerusername
 strip_quotes docker_username
-VERSION=$config_VERSION
-strip_quotes VERSION
-cluster_name=$docker_username/$REPOSITORY_NAME
-url=$docker_username/$REPOSITORY_NAME":latest"
+cluster_name=$docker_username/$repository_name/$version
+url=$docker_username/$repository_name":latest"
 
+function check_status()
+{
+  if [ $? -eq 0 ]
+then
+  echo "Succeeded "
+else
+  echo "Something went wrong while executing steps: Exiting...." >&2
+  jumpto end
+fi
+}
 
 read -p "Do you want to clean and build the project.Pressing no will skip creation of container too and use the exiting container in dockerhub$build? [y/n]" answer
 #
 if [[ ${answer} = y ]]; then
-sbt clean package
-sbt copyJarsTask
+sbt clean package copyJarsTask
+check_status
 else
 jumpto createcluster
 fi
@@ -74,7 +89,8 @@ if [[ ${answer} = y ]]; then
 read -p "Enter the image name [${imagename}] : $name" imagename
 #Copy docker file
 $(cp  $parent_path/Dockerfile $(pwd))
-docker build  --build-arg SCALA_VERSION="scala-${SCALA_VERSION}" --no-cache -t imagename:local .
+docker build  --build-arg scalaversion="scala-${scala_version}" --no-cache -t imagename:local .
+check_status
 fi
 
 deploy:
@@ -88,32 +104,31 @@ createcluster:
 echo "Creating cluster"
 #Set runtime in databricks
 
-if [ "$SCALA_VERSION" == 2.11 ]
+if [ "$scala_version" == 2.11 ]
 then
 runtime="6.4.x-esr-scala2.11"
-elif [ "$SCALA_VERSION" == 2.12 ]
+elif [ "$scala_version" == 2.12 ]
 then
 runtime="7.3.x-scala2.12"
 else
 echo "Not Supported"
 jumpto end
 fi
-
 #Create the databricks config json file
 function create_databricks_config_json()
 {
     {
 echo '{
     "autoscale": {
-    "min_workers":' $config_min_workers',
-    "max_workers":' $config_max_workers '},
+    "min_workers":' \"$config_min_workers\"',
+    "max_workers":' \"$config_max_workers\" '},
     "cluster_name"': \"$cluster_name\"',
     "spark_version"': \"$runtime\"',
      "aws_attributes": {
      "zone_id"': $config_zone_id ',
-     "instance_profile_arn":' $config_roles_instance_profile_arn '},
+     "instance_profile_arn":' $(remove_end_comma  "$config_roles_instance_profile_arn") '},
      "node_type_id":' $config_node_type_id',
-     "autotermination_minutes":' $config_autotermination_minutes',
+     "autotermination_minutes":' \"$config_autotermination_minutes\"',
      "driver_node_type_id":' $config_driver_node_type_id',
      "docker_image": {
       "url":' \"$url\" '},'
@@ -144,8 +159,13 @@ create_databricks_config_json
 profile_name=$config_databricks_profile
 strip_quotes profile_name
 databricks clusters create --json-file databricks_cluster.json --profile $profile_name
+check_status
+cluster_status=$(databricks clusters get --cluster-name "$cluster_name")
+if [ ! -z "$cluster_status" -a "$cluster_status" != " " ]; then
 echo "### Cluster created sucessfully with below information ###"
-echo $(databricks clusters get --cluster-name "$cluster_name")
+echo "$cluster_status"
+fi
+
 }
 
 #delete the cluster if exits and recreates with  new docker image
