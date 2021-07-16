@@ -141,7 +141,7 @@ echo '{
       fi
     asuumerolearn=$config_roles_assume_role_arn
         strip_quotes asuumerolearn
-    if [[  ! -z $asuumerolearn  ]]; then
+    if [ ! -z "$asuumerolearn" -a "$asuumerolearn" != " " ]; then
      echo '"spark_conf": {
     "spark.hadoop.fs.s3a.impl": "com.databricks.s3a.S3AFileSystem",
      "spark.hadoop.fs.s3n.impl": "com.databricks.s3a.S3AFileSystem",
