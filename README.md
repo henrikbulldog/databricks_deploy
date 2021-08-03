@@ -40,14 +40,14 @@ deleteJarsTask := {
 dockerusername: "<docker hub user name>"
 databricks_profile: "<enter profile>"
 roles: {
- instance_profile_arn: "<enter role>"
+ instance_profile_arn: "<enter role>",
  assume_role_arn: "<enter role>"
 }
 zone_id: "<enter region>"
-min_workers: "<min workers>"
-max_workers: "<max workers>"
+min_workers: <min workers>
+max_workers: <max workers>
 node_type_id: "<node type>"
-autotermination_minutes: "<time out>"
+autotermination_minutes: <time out>
 driver_node_type_id: "<driver node type>"
 ```
 # Usage of batch script
