@@ -37,24 +37,18 @@ deleteJarsTask := {
 ```
 - All your settings can be put inside a config.yaml file like below(Applicable only for shell script).
 ```
-ORGANIZATION : <orgnaziation docker hub name>
-REPOSITORY_NAME : <repositort name>
-VERSION : <version of repository>
-clustername: "<enter cluster name>"
+dockerusername: "<docker hub user name>"
 databricks_profile: "<enter profile>"
 roles: {
- instance_profile_arn: "<enter role>"
+ instance_profile_arn: "<enter role>",
  assume_role_arn: "<enter role>"
 }
 zone_id: "<enter region>"
-min_workers: "<min workers>"
-max_workers: "<max workers>"
-spark_version: "<spark version in cluster>"
-node_type_id : "<node type>"
-autotermination_minutes: "<time out>"
-driver_node_type_id : "<driver node type>"
-docker_image_url : "<docker image path>"
-
+min_workers: <min workers>
+max_workers: <max workers>
+node_type_id: "<node type>"
+autotermination_minutes: <time out>
+driver_node_type_id: "<driver node type>"
 ```
 # Usage of batch script
 - Go to the root folder of your project.
@@ -65,5 +59,5 @@ docker_image_url : "<docker image path>"
 
 # Usage of shell script
 - Go to the root folder of your project.
-- Run databricks_deploy.sh  and follow instructions
+- Run databricks_deploy.sh eg bash path/databricks_deploy.sh and follow instructions
 - It will create docker image with all required dependencies and create the databricks cluster for you
