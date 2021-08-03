@@ -16,7 +16,7 @@ imagename=$(echo $sbt_value |awk -F ' ' '{print $2}')
 scala_version=$(echo $sbt_value |awk -F ' ' '{print $3}'|awk -F '.' '{print $1 "."$2}')
 repository_name=$imagename
 parent_path=$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )
-y#import yml parsing script
+#import yml parsing script
 source $parent_path/parse_yaml.sh
 #
 #
